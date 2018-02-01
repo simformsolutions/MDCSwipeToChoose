@@ -30,6 +30,8 @@
 
 const void * const MDCSwipeOptionsKey = &MDCSwipeOptionsKey;
 const void * const MDCViewStateKey = &MDCViewStateKey;
+const void * const MDCVerticalPanGestureRecognizerKey = &MDCVerticalPanGestureRecognizerKey;
+
 
 @implementation UIView (MDCSwipeToChoose)
 
@@ -39,11 +41,8 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
     self.mdc_options = options ? options : [MDCSwipeOptions new];
     self.mdc_viewState = [MDCViewState new];
     self.mdc_viewState.originalCenter = self.center;
-    self.mdc_viewState.originalTransform = self.layer.transform;
 
-    if (options.swipeEnabled) {
-        [self mdc_setupPanGestureRecognizer];
-    }
+    [self mdc_setupPanGestureRecognizer];
 }
 
 - (void)mdc_swipe:(MDCSwipeDirection)direction {
@@ -68,7 +67,7 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
 
     // Finalize upon completion of the animations.
     void (^completion)(BOOL) = ^(BOOL finished) {
-        if (finished) { [self mdc_finalizePositionForDirection:direction]; }
+        if (finished) { [self mdc_finalizePosition]; }
     };
 
     [UIView animateWithDuration:self.mdc_options.swipeAnimationDuration
@@ -76,6 +75,10 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
                         options:self.mdc_options.swipeAnimationOptions
                      animations:animations
                      completion:completion];
+}
+
+- (VerticalPanGestureRecognizer *)mdc_panGestureRecognizer {
+    return [self mdc_panGesture];
 }
 
 #pragma mark - Internal Methods
@@ -96,6 +99,10 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
     return objc_getAssociatedObject(self, MDCViewStateKey);
 }
 
+- (VerticalPanGestureRecognizer *)mdc_panGesture {
+    return objc_getAssociatedObject(self, MDCVerticalPanGestureRecognizerKey);
+}
+
 #pragma mark Setup
 
 - (void)mdc_swipeToChooseSetupIfNecessary {
@@ -106,9 +113,9 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
 
 - (void)mdc_setupPanGestureRecognizer {
     SEL action = @selector(mdc_onSwipeToChoosePanGestureRecognizer:);
-    UIPanGestureRecognizer *panGestureRecognizer =
-    [[UIPanGestureRecognizer alloc] initWithTarget:self
-                                            action:action];
+    VerticalPanGestureRecognizer *panGestureRecognizer =
+    [[VerticalPanGestureRecognizer alloc] initWithTarget:self
+                                                  action:action];
     [self addGestureRecognizer:panGestureRecognizer];
 }
 
@@ -116,10 +123,6 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
 
 - (void)mdc_finalizePosition {
     MDCSwipeDirection direction = [self mdc_directionOfExceededThreshold];
-    [self mdc_finalizePositionForDirection:direction];
-}
-
-- (void)mdc_finalizePositionForDirection:(MDCSwipeDirection)direction {
     switch (direction) {
         case MDCSwipeDirectionRight:
         case MDCSwipeDirectionLeft: {
@@ -153,30 +156,32 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
 - (void)mdc_exitSuperviewFromTranslation:(CGPoint)translation {
     MDCSwipeDirection direction = [self mdc_directionOfExceededThreshold];
     id<MDCSwipeToChooseDelegate> delegate = self.mdc_options.delegate;
-    if ([delegate respondsToSelector:@selector(view:shouldBeChosenWithDirection:yes:no:)]) {
-        [delegate view:self shouldBeChosenWithDirection:direction yes:^{
-            MDCSwipeResult *state = [MDCSwipeResult new];
-            state.view = self;
-            state.translation = translation;
-            state.direction = direction;
-            state.onCompletion = ^{
-                if ([delegate respondsToSelector:@selector(view:wasChosenWithDirection:)]) {
-                    [delegate view:self wasChosenWithDirection:direction];
-                }
-            };
-            self.mdc_options.onChosen(state);
-        } no:^{
+    if ([delegate respondsToSelector:@selector(view:shouldBeChosenWithDirection:)]) {
+        BOOL should = [delegate view:self shouldBeChosenWithDirection:direction];
+        if (!should) {
             [self mdc_returnToOriginalCenter];
             if (self.mdc_options.onCancel != nil){
                 self.mdc_options.onCancel(self);
             }
-        }];
+            return;
+        }
     }
+
+    MDCSwipeResult *state = [MDCSwipeResult new];
+    state.view = self;
+    state.translation = translation;
+    state.direction = direction;
+    state.onCompletion = ^{
+        if ([delegate respondsToSelector:@selector(view:wasChosenWithDirection:)]) {
+            [delegate view:self wasChosenWithDirection:direction];
+        }
+    };
+    self.mdc_options.onChosen(state);
 }
 
 - (void)mdc_executeOnPanBlockForTranslation:(CGPoint)translation {
     if (self.mdc_options.onPan) {
-        CGFloat thresholdRatio = MIN(1.f, fabs(translation.x)/self.mdc_options.threshold);
+        CGFloat thresholdRatio = MIN(1.f, fabsf(translation.x)/self.mdc_options.threshold);
 
         MDCSwipeDirection direction = MDCSwipeDirectionNone;
         if (translation.x > 0.f) {
@@ -234,11 +239,11 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
 
 - (void)mdc_onSwipeToChoosePanGestureRecognizer:(UIPanGestureRecognizer *)panGestureRecognizer {
     UIView *view = panGestureRecognizer.view;
-
+    //MARK:- Change By SimformSolutions, To send the current position of view to controller
+    [self mdc_onSwipeingWithPosition:view.frame.origin];
     if (panGestureRecognizer.state == UIGestureRecognizerStateBegan) {
         self.mdc_viewState.originalCenter = view.center;
         self.mdc_viewState.originalTransform = view.layer.transform;
-
         // If the pan gesture originated at the top half of the view, rotate the view
         // away from the center. Otherwise, rotate towards the center.
         if ([panGestureRecognizer locationInView:view].y < view.center.y) {
@@ -246,9 +251,7 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
         } else {
             self.mdc_viewState.rotationDirection = MDCRotationTowardsCenter;
         }
-    } else if (panGestureRecognizer.state == UIGestureRecognizerStateEnded ||
-               panGestureRecognizer.state == UIGestureRecognizerStateCancelled ||
-               panGestureRecognizer.state == UIGestureRecognizerStateFailed) {
+    } else if (panGestureRecognizer.state == UIGestureRecognizerStateEnded) {
         // Either move the view back to its original position or move it off screen.
         [self mdc_finalizePosition];
     } else {
@@ -260,6 +263,14 @@ const void * const MDCViewStateKey = &MDCViewStateKey;
                      rotationDirection:self.mdc_viewState.rotationDirection];
         [self mdc_executeOnPanBlockForTranslation:translation];
     }
+}
+//MARK:- Change By SimformSolutions, To send the current position of view to controller
+-(void)mdc_onSwipeingWithPosition:(CGPoint)point {
+    id<MDCSwipeToChooseDelegate> delegate = self.mdc_options.delegate;
+     if ([delegate respondsToSelector:@selector(view:wasChosenWithPosition:)]) {
+         [delegate view:self wasChosenWithPosition:point];
+     }
+    
 }
 
 @end

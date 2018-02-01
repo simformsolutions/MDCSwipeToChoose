@@ -24,6 +24,7 @@
 
 #import <UIKit/UIKit.h>
 #import "MDCSwipeDirection.h"
+#import "VerticalPanGestureRecognizer.h"
 
 @class MDCSwipeOptions;
 
@@ -57,5 +58,11 @@
  * that method and perform setup using the default set of options.
  */
 - (void)mdc_swipe:(MDCSwipeDirection)direction;
+
+
+/*!
+ * Returns the internal PanGestureRecognizer for the view.
+ */
+- (VerticalPanGestureRecognizer *)mdc_panGestureRecognizer;
 
 @end

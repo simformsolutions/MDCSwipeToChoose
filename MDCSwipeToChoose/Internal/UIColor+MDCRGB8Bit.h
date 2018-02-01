@@ -26,9 +26,9 @@
 
 @interface UIColor (MDCRGB8Bit)
 
-+ (UIColor *)mdc_colorWith8BitRed:(CGFloat)red
-                            green:(CGFloat)green
-                             blue:(CGFloat)blue
-                            alpha:(CGFloat)alpha;
++ (UIColor *)colorWith8BitRed:(CGFloat)red
+                        green:(CGFloat)green
+                         blue:(CGFloat)blue
+                        alpha:(CGFloat)alpha;
 
 @end

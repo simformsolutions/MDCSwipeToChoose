@@ -27,17 +27,22 @@
 - (void)viewDidCancelSwipe:(UIView *)view;
 
 /*!
- * Sent before a choice is made. Return `no` to prevent the choice from being made,
- * and `yes` otherwise.
+ * Sent before a choice is made. Return `NO` to prevent the choice from being made,
+ * and `YES` otherwise.
  */
-- (void)view:(UIView *)view shouldBeChosenWithDirection:(MDCSwipeDirection)direction
-         yes:(void (^)(void))yes
-          no:(void (^)(void))no;
+- (BOOL)view:(UIView *)view shouldBeChosenWithDirection:(MDCSwipeDirection)direction;
 
 /*!
  * Sent after a choice is made. When using the default `MDCSwipeOptions`, the `view`
  * is removed from the view hierarchy by the time this message is sent.
  */
 - (void)view:(UIView *)view wasChosenWithDirection:(MDCSwipeDirection)direction;
+
+//MARK:- Change By SimformSolutions, To send the current position of view to controller
+/*!
+ * Sent the view point to controller.
+ * send when user move the view
+ */
+-(void)view:(UIView *)view wasChosenWithPosition:(CGPoint)points;
 
 @end
