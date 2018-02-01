@@ -38,7 +38,6 @@
         _swipeAnimationDuration = 0.1;
         _swipeAnimationOptions = UIViewAnimationOptionCurveEaseIn;
         _rotationFactor = 3.f;
-        _swipeEnabled = YES;
 
         _onChosen = [[self class] exitScreenOnChosenWithDuration:0.1
                                                          options:UIViewAnimationOptionCurveLinear];
@@ -58,8 +57,7 @@
                               delay:0.0
                             options:options
                          animations:^{
-                             state.view.center = CGPointMake(CGRectGetMidX(destination),
-                                                             CGRectGetMidY(destination));
+                             state.view.frame = destination;
                          } completion:^(BOOL finished) {
                              if (finished) {
                                  [state.view removeFromSuperview];

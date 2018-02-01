@@ -31,7 +31,6 @@
 
 static CGFloat const MDCSwipeToChooseViewHorizontalPadding = 10.f;
 static CGFloat const MDCSwipeToChooseViewTopPadding = 20.f;
-static CGFloat const MDCSwipeToChooseViewImageTopPadding = 100.f;
 static CGFloat const MDCSwipeToChooseViewLabelWidth = 65.f;
 
 @interface MDCSwipeToChooseView ()
@@ -47,9 +46,9 @@ static CGFloat const MDCSwipeToChooseViewLabelWidth = 65.f;
     if (self) {
         _options = options ? options : [MDCSwipeToChooseViewOptions new];
         [self setupView];
-        [self constructContentView];
+        [self constructImageView];
         [self constructLikedView];
-        [self constructNopeView];
+        [self constructNopeImageView];
         [self setupSwipeToChoose];
     }
     return self;
@@ -62,66 +61,49 @@ static CGFloat const MDCSwipeToChooseViewLabelWidth = 65.f;
     self.layer.cornerRadius = 5.f;
     self.layer.masksToBounds = YES;
     self.layer.borderWidth = 2.f;
-    self.layer.borderColor = [UIColor mdc_colorWith8BitRed:220.f
+    self.layer.borderColor = [UIColor colorWith8BitRed:220.f
                                                  green:220.f
                                                   blue:220.f
                                                  alpha:1.f].CGColor;
 }
 
-- (void)constructContentView {
-    _contentView = [[UIView alloc] initWithFrame:self.bounds];
-    _contentView.clipsToBounds = YES;
-    [self addSubview:_contentView];
+- (void)constructImageView {
+    _imageView = [[UIImageView alloc] initWithFrame:self.bounds];
+    _imageView.clipsToBounds = YES;
+    [self addSubview:_imageView];
 }
 
 - (void)constructLikedView {
-    CGFloat yOrigin = (self.options.likedImage ? MDCSwipeToChooseViewImageTopPadding : MDCSwipeToChooseViewTopPadding);
-
     CGRect frame = CGRectMake(MDCSwipeToChooseViewHorizontalPadding,
-                              yOrigin,
-                              CGRectGetMidX(self.contentView.bounds),
+                              MDCSwipeToChooseViewTopPadding,
+                              CGRectGetMidX(_imageView.bounds),
                               MDCSwipeToChooseViewLabelWidth);
-    if (self.options.likedImage) {
-        self.likedView = [[UIImageView alloc] initWithImage:self.options.likedImage];
-        self.likedView.frame = frame;
-        self.likedView.contentMode = UIViewContentModeScaleAspectFit;
-    } else {
-        self.likedView = [[UIView alloc] initWithFrame:frame];
-        [self.likedView constructBorderedLabelWithText:self.options.likedText
-                                                 color:self.options.likedColor
-                                                 angle:self.options.likedRotationAngle];
-    }
+    self.likedView = [[UIView alloc] initWithFrame:frame];
+    [self.likedView constructBorderedLabelWithText:self.options.likedText
+                                             color:self.options.likedColor
+                                             angle:self.options.likedRotationAngle];
     self.likedView.alpha = 0.f;
-    [self.contentView addSubview:self.likedView];
+    [self.imageView addSubview:self.likedView];
 }
 
-- (void)constructNopeView {
-    CGFloat width = CGRectGetMidX(self.contentView.bounds);
-    CGFloat xOrigin = CGRectGetMaxX(self.contentView.bounds) - width - MDCSwipeToChooseViewHorizontalPadding;
-    CGFloat yOrigin = (self.options.nopeImage ? MDCSwipeToChooseViewImageTopPadding : MDCSwipeToChooseViewTopPadding);
-    CGRect frame = CGRectMake(xOrigin,
-                              yOrigin,
-                              width,
-                              MDCSwipeToChooseViewLabelWidth);
-    if (self.options.nopeImage) {
-        self.nopeView = [[UIImageView alloc] initWithImage:self.options.nopeImage];
-        self.nopeView.frame = frame;
-        self.nopeView.contentMode = UIViewContentModeScaleAspectFit;
-    } else {
-        self.nopeView = [[UIView alloc] initWithFrame:frame];
-        [self.nopeView constructBorderedLabelWithText:self.options.nopeText
-                                                color:self.options.nopeColor
-                                                angle:self.options.nopeRotationAngle];
-    }
+- (void)constructNopeImageView {
+    CGFloat width = CGRectGetMidX(self.imageView.bounds);
+    CGFloat xOrigin = CGRectGetMaxX(_imageView.bounds) - width - MDCSwipeToChooseViewHorizontalPadding;
+    self.nopeView = [[UIImageView alloc] initWithFrame:CGRectMake(xOrigin,
+                                                                  MDCSwipeToChooseViewTopPadding,
+                                                                  width,
+                                                                  MDCSwipeToChooseViewLabelWidth)];
+    [self.nopeView constructBorderedLabelWithText:self.options.nopeText
+                                            color:self.options.nopeColor
+                                            angle:self.options.nopeRotationAngle];
     self.nopeView.alpha = 0.f;
-    [self.contentView addSubview:self.nopeView];
+    [self.imageView addSubview:self.nopeView];
 }
 
 - (void)setupSwipeToChoose {
     MDCSwipeOptions *options = [MDCSwipeOptions new];
     options.delegate = self.options.delegate;
     options.threshold = self.options.threshold;
-    options.swipeEnabled = self.options.swipeEnabled;
 
     __block UIView *likedImageView = self.likedView;
     __block UIView *nopeImageView = self.nopeView;
